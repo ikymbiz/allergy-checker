@@ -5,290 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Allergy Checker</title>
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --success: #10b981;
-            --unsure: #6b7280;
-            --amazon: #232f3e;
-            --bg: #f8fafc;
-            --card: #ffffff;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg); margin: 0; padding: 15px; color: #1e293b;
-            line-height: 1.5;
-        }
-
-        .container {
-            max-width: 500px; margin: auto; background: var(--card); padding: 25px;
-            border-radius: 32px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
-            position: relative; overflow: hidden;
-        }
-
-        .header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;
-        }
-
-        h3 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #0f172a; }
-
-        select {
-            padding: 8px 12px; border-radius: 12px; border: 1px solid #e2e8f0;
-            background: #f1f5f9; font-size: 14px; font-weight: 600; cursor: pointer; outline: none;
-        }
-
-        .settings {
-            background: #f8fafc; padding: 16px; border-radius: 20px;
-            margin-bottom: 20px; font-size: 13px; border: 1px solid #e2e8f0;
-        }
-
-        summary { font-weight: 700; cursor: pointer; color: #64748b; margin-bottom: 5px; }
-
-        input[type="text"] {
-            width: 100%; padding: 12px 16px; margin: 8px 0; border: 1px solid #e2e8f0;
-            border-radius: 12px; box-sizing: border-box; font-size: 14px; outline: none; transition: 0.2s;
-        }
-
-        .preview-wrapper {
-            position: relative; width: 100%; border-radius: 24px; overflow: hidden;
-            background: #0f172a; aspect-ratio: 1/1; margin-bottom: 20px;
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        video, #file-preview { width: 100%; height: 100%; object-fit: cover; display: none; }
-
-        /* スキャン線アニメーション */
-        .scan-line {
-            position: absolute; width: 100%; height: 2px; background: var(--primary);
-            top: 0; left: 0; z-index: 5; display: none;
-            box-shadow: 0 0 15px var(--primary);
-            animation: scan 2s linear infinite;
-        }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-
-        #loading-overlay {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            background: rgba(255,255,255,0.9); display: none; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10; backdrop-filter: blur(4px);
-        }
-
-        .spinner {
-            width: 48px; height: 48px; border: 4px solid #e2e8f0;
-            border-top: 4px solid var(--primary); border-radius: 50%;
-            animation: spin 1s infinite linear; margin-bottom: 12px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
+        :root { --primary: #2563eb; --danger: #ef4444; --warning: #f59e0b; --success: #10b981; --bg: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); padding: 15px; margin: 0; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .preview-wrapper { position: relative; width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 24px; overflow: hidden; margin-bottom: 20px; }
+        video, #file-preview { width: 100%; height: 100%; object-fit: cover; }
+        #loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-        button {
-            padding: 16px; font-size: 15px; cursor: pointer; border: none;
-            border-radius: 16px; font-weight: 700; transition: 0.2s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-
+        button { padding: 16px; border-radius: 16px; border: none; font-weight: bold; cursor: pointer; }
         .btn-capture { background: var(--primary); color: white; grid-column: span 2; }
-        .btn-file, .btn-torch { background: #f1f5f9; color: #475569; }
-
-        .alert-box { padding: 24px; border-radius: 24px; margin-top: 20px; border-top: 8px solid #ccc; text-align: center; }
-        .alert-face { font-size: 64px; display: block; margin-bottom: 10px; }
-        .alert-status-text { font-size: 24px; font-weight: 900; display: block; margin-bottom: 10px; }
-
-        .alert-critical { background: #fef2f2; border-color: var(--danger); color: var(--danger); }
-        .alert-warning { background: #fffbeb; border-color: var(--warning); color: var(--warning); }
-        .alert-safe { background: #f0fdf4; border-color: var(--success); color: var(--success); }
-        .alert-info { background: #eff6ff; border-color: var(--info); color: var(--info); }
-
-        .tag { display: inline-block; padding: 6px 12px; border-radius: 10px; margin: 4px; font-size: 12px; font-weight: 700; background: rgba(0,0,0,0.06); }
-        .btn-amazon { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--amazon); color: white; text-decoration: none; padding: 16px; border-radius: 16px; font-weight: 700; margin-top: 20px; }
+        .alert-box { padding: 20px; border-radius: 20px; margin-top: 20px; text-align: center; border-top: 8px solid #ccc; }
+        .alert-safe { background: #f0fdf4; border-color: var(--success); }
+        .alert-critical { background: #fef2f2; border-color: var(--danger); }
+        .tag { display: inline-block; padding: 4px 8px; background: rgba(0,0,0,0.1); border-radius: 8px; margin: 2px; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h3 id="ui-title">Allergy Checker - アレルギーチェッカー</h3>
-        <select id="lang-selector">
-            <option value="ja">日本語</option>
-            <option value="en">English</option>
-            <option value="zh">简体中文</option>
-            <option value="ko">한국어</option>
-            <option value="es">Español</option>
-        </select>
-    </div>
-
-    <details class="settings">
-        <summary id="ui-settings-label">⚙️ Settings</summary>
-        <div style="padding-top:10px;">
-            <label id="ui-diet-label" style="font-weight:700; color:#475569;">Restricted Ingredients:</label>
-            <input type="text" id="my-diet" placeholder="e.g. Peanut, Vegan, Halal">
-            <button id="ui-save-btn" style="background:#1e293b; width:100%; color:white; padding:12px; border-radius:12px; margin-top:8px;">SAVE</button>
-        </div>
-    </details>
+    <h3>Allergy Checker</h3>
 
     <div class="preview-wrapper">
-        <div id="loading-overlay">
-            <div class="spinner"></div>
-            <p id="ui-loading-text" style="font-weight:700; color:#1e293b;"></p>
-        </div>
-        <div class="scan-line" id="scan-line"></div>
-        <div id="placeholder-text" style="color:#94a3b8;">Press START SCAN</div>
+        <div id="loading-overlay"><div>Loading...</div><p id="loading-text"></p></div>
         <video id="video" autoplay playsinline muted></video>
-        <img id="file-preview">
+        <img id="file-preview" style="display:none;">
     </div>
 
     <div class="controls">
-        <button class="btn-capture" id="ui-scan-btn">🔍 START SCAN</button>
-        <button class="btn-torch" id="ui-torch-btn">🔦 LIGHT</button>
-        <button class="btn-file" id="ui-file-btn">📁 PHOTO</button>
-        <input type="file" id="image-input" accept="image/*" style="display:none;">
+        <input type="text" id="my-diet" placeholder="制限する成分 (例: 小麦, Peanut)" style="grid-column: span 2; padding:12px; border-radius:12px; border:1px solid #ddd; margin-bottom:10px;">
+        <button class="btn-capture" id="btn-scan">🔍 スキャン開始 / 判定</button>
+        <button id="btn-torch" style="background:#eee;">🔦 ライト</button>
+        <button id="btn-file" style="background:#eee;">📁 写真を選択</button>
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
     </div>
 
     <div id="result-area"></div>
 </div>
 
 <script>
-    const i18n = {
-        ja: { scan: "🔍 スキャン開始", capture: "📸 判定する", hold: "動かさないでください...", loading: "AIが分析中...", safe: "たべてOK！", warning: "注意が必要", critical: "だめだよ！", unsure: "判別不能", info: "なまえをみせて", btnSafe: "🛒 Amazonでもっと見る", btnAlert: "🔍 代わりをAmazonで探す", settings: "⚙️ 設定", diet: "食べられないもの:", save: "設定を保存", amz: "amazon.co.jp" },
-        en: { scan: "🔍 START SCAN", capture: "📸 CAPTURE", hold: "Hold steady...", loading: "Analyzing...", safe: "SAFE TO EAT", warning: "BE CAREFUL", critical: "DO NOT EAT", unsure: "UNSURE", info: "NEED NAME", btnSafe: "🛒 Buy more on Amazon", btnAlert: "🔍 Find Alternatives", settings: "⚙️ Settings", diet: "Restrictions:", save: "SAVE", amz: "amazon.com" },
-        zh: { scan: "🔍 开始扫描", capture: "📸 拍摄判定", hold: "请保持稳定...", loading: "正在分析...", safe: "可以食用", warning: "请注意", critical: "不可食用", unsure: "无法判断", info: "请出示商品名", btnSafe: "🛒 在Amazon购买更多", btnAlert: "🔍 在Amazon查找替代品", settings: "⚙️ 设置", diet: "禁忌成分:", save: "保存设置", amz: "amazon.com" },
-        ko: { scan: "🔍 스캔 시작", capture: "📸 촬영 판정", hold: "움직이지 마세요...", loading: "분석 중...", safe: "먹어도 좋아요", warning: "주의 필요", critical: "먹으면 안 돼요", unsure: "판별 불가", info: "상품명을 보여주세요", btnSafe: "🛒 Amazon에서 더 보기", btnAlert: "🔍 Amazon에서 대체품 찾기", settings: "⚙️ 설정", diet: "제한 성分:", save: "저장하기", amz: "amazon.com" },
-        es: { scan: "🔍 INICIAR", capture: "📸 CAPTURAR", hold: "Mantenga estable...", loading: "Analizando...", safe: "APTO PARA COMER", warning: "TENER CUIDADO", critical: "NO COMER", unsure: "NO ESTOY SEGURO", info: "MOSTRAR NOMBRE", btnSafe: "🛒 Ver en Amazon", btnAlert: "🔍 Buscar en Amazon", settings: "⚙️ Ajustes", diet: "Restricciones:", save: "GUARDAR", amz: "amazon.es" }
-    };
+    let stream = null;
+    const i18n = { ja: { hold: "動かさないで...", analyzing: "AI分析中..." } };
 
-    let currentLang = localStorage.getItem('ui_lang') || 'ja';
-    let cameraStream = null;
-    const AMAZON_ID = "ddeberias-22";
-
-    window.onload = () => {
-        document.getElementById('lang-selector').value = currentLang;
-        updateUIStrings();
-    };
-
-    document.getElementById('lang-selector').onchange = (e) => {
-        currentLang = e.target.value;
-        localStorage.setItem('ui_lang', currentLang);
-        updateUIStrings();
-    };
-
-    function updateUIStrings() {
-        const t = i18n[currentLang] || i18n.en;
-        document.getElementById('ui-scan-btn').innerText = cameraStream ? t.capture : t.scan;
-        document.getElementById('ui-settings-label').innerText = t.settings;
-        document.getElementById('ui-diet-label').innerText = t.diet;
-        document.getElementById('ui-save-btn').innerText = t.save;
-        document.getElementById('my-diet').value = localStorage.getItem('my_diet') || "";
-    }
-
-    async function handleScanButton() {
-        if (!cameraStream) {
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-                });
-                const video = document.getElementById('video');
-                video.srcObject = cameraStream;
-                video.style.display = "block";
-                document.getElementById('scan-line').style.display = "block";
-                document.getElementById('placeholder-text').style.display = "none";
-                updateUIStrings();
-            } catch (err) { alert("Camera Access Error"); }
+    // 1. ライト（トーチ）制御
+    async function toggleTorch() {
+        if (!stream) return;
+        const track = stream.getVideoTracks()[0];
+        const caps = track.getCapabilities();
+        if (caps.torch) {
+            const settings = track.getSettings();
+            await track.applyConstraints({ advanced: [{ torch: !settings.torch }] });
         } else {
-            captureAndExecute();
+            alert("このデバイスはライト制御に対応していません");
         }
     }
 
-    async function captureAndExecute() {
-        const t = i18n[currentLang] || i18n.en;
+    // 2. カメラ開始と判定
+    async function handleScan() {
+        if (!stream) {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            document.getElementById('video').srcObject = stream;
+        } else {
+            capture();
+        }
+    }
+
+    // 3. 画像のリサイズとキャプチャ（500エラー対策）
+    async function capture() {
         document.getElementById('loading-overlay').style.display = "flex";
-        document.getElementById('ui-loading-text').innerText = t.hold;
+        document.getElementById('loading-text').innerText = i18n.ja.hold;
 
-        const canvas = document.createElement('canvas');
         const video = document.getElementById('video');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
+        const canvas = document.createElement('canvas');
 
-        // const base64 = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
-        const base64 = canvas.toDataURL('image/jpeg', 0.3).split(',')[1];
-        stopCamera();
+        // Vercel制限対策: 最大幅を1024pxに縮小
+        const MAX_W = 1024;
+        let w = video.videoWidth, h = video.videoHeight;
+        if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
 
-        callAnalyze(base64);
-    }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(video, 0, 0, w, h);
 
-    function stopCamera() {
-        if (cameraStream) { cameraStream.getTracks().forEach(track => track.stop()); cameraStream = null; }
+        const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+
+        // カメラ停止
+        stream.getTracks().forEach(t => t.stop()); stream = null;
         document.getElementById('video').style.display = "none";
-        document.getElementById('scan-line').style.display = "none";
-        updateUIStrings();
+
+        analyze(base64);
     }
 
-    async function callAnalyze(base64Data) {
-        const t = i18n[currentLang] || i18n.en;
-        document.getElementById('ui-loading-text').innerText = t.loading;
-
+    async function analyze(base64) {
+        document.getElementById('loading-text').innerText = i18n.ja.analyzing;
         try {
-            // Vercel Serverless Function (/api/analyze) を呼び出す
-            const response = await fetch('/api/analyze', {
+            const res = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    imageBase64: base64Data,
+                    imageBase64: base64,
                     myDiet: document.getElementById('my-diet').value,
-                    lang: currentLang
+                    lang: "ja"
                 })
             });
-
-            if (!response.ok) throw new Error("Server Error");
-
-            const res = await response.json();
-            renderResult(res);
-        } catch (e) {
-            alert("Analysis failed. Please try again.");
-            console.error(e);
-        } finally {
-            document.getElementById('loading-overlay').style.display = "none";
-        }
+            const data = await res.json();
+            render(data);
+        } catch (e) { alert("エラーが発生しました"); }
+        document.getElementById('loading-overlay').style.display = "none";
     }
 
-    function renderResult(res) {
-        const t = i18n[currentLang] || i18n.en;
-        let alertClass = "alert-safe", face = "😊", statusText = t.safe;
-
-        if (res.status === "critical") { alertClass = "alert-critical"; face = "😫"; statusText = t.critical; }
-        else if (res.status === "warning") { alertClass = "alert-warning"; face = "🤔"; statusText = t.warning; }
-        else if (res.status === "info") { alertClass = "alert-info"; face = "👀"; statusText = t.info; }
-
-        const isSafe = (res.status === "safe");
-        const searchKeyword = isSafe ? (res.product_name || "Food") : (res.product_name + " " + (res.matches || []).join(" "));
-        const amazonUrl = `https://www.${t.amz}/s?k=${encodeURIComponent(searchKeyword)}&tag=${AMAZON_ID}`;
-
+    function render(res) {
+        const isSafe = res.status === "safe";
         document.getElementById('result-area').innerHTML = `
-            <div class="alert-box ${alertClass}">
-                <span class="alert-face">${face}</span>
-                <span class="alert-status-text">${statusText}</span>
-                <h3 style="margin:10px 0;">${res.product_name || ''}</h3>
-                <p style="font-weight:bold; line-height:1.4;">${res.suitability_note}</p>
-                <div style="margin-bottom:10px;">${(res.matches || []).map(m => `<span class="tag">${m}</span>`).join('')}</div>
-                <a href="${amazonUrl}" target="_blank" class="btn-amazon">${isSafe ? t.btnSafe : t.btnAlert}</a>
+            <div class="alert-box ${isSafe ? 'alert-safe' : 'alert-critical'}">
+                <h2>${isSafe ? '😊 OK' : '😫 NG'}</h2>
+                <p><strong>${res.product_name}</strong></p>
+                <p>${res.suitability_note}</p>
+                <div>${(res.matches || []).map(m => `<span class="tag">${m}</span>`).join('')}</div>
             </div>
         `;
     }
 
-    document.getElementById('ui-scan-btn').onclick = handleScanButton;
-    document.getElementById('ui-save-btn').onclick = () => {
-        localStorage.setItem('my_diet', document.getElementById('my-diet').value);
-        alert("Saved!");
-    };
-    document.getElementById('ui-file-btn').onclick = () => document.getElementById('image-input').click();
-    document.getElementById('image-input').onchange = (e) => {
+    document.getElementById('btn-scan').onclick = handleScan;
+    document.getElementById('btn-torch').onclick = toggleTorch;
+    document.getElementById('btn-file').onclick = () => document.getElementById('file-input').click();
+    document.getElementById('file-input').onchange = (e) => {
         const reader = new FileReader();
-        reader.onload = (ev) => callAnalyze(ev.target.result.split(',')[1]);
+        reader.onload = (ev) => analyze(ev.target.result.split(',')[1]);
         reader.readAsDataURL(e.target.files[0]);
     };
 </script>

@@ -1,19 +1,19 @@
-// api/analyze.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const { imageBase64, myDiet, lang } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
 
-  // 1. 環境変数のチェック
   if (!apiKey) {
     return res.status(500).json({ error: "VercelのSettingsでGEMINI_API_KEYを設定してください。" });
   }
 
-  const prompt = `Analyze this food label for: "${myDiet}". Respond in ${lang}. JSON only.`;
+  // AIへの指示をより厳格に
+  const prompt = `Task: Analyze food label for "${myDiet}". Language: "${lang}".
+    Return ONLY a JSON object with: 
+    {"status": "safe|warning|critical|unsure|info", "product_name": "string", "suitability_note": "explanation", "translated_ingredients": "string", "matches": ["item1"]}`;
 
   try {
-    // ユーザー指定の最新エンドポイントを使用
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(apiUrl, {
@@ -31,18 +31,19 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // 2. Gemini側からのエラーをキャッチ
-    if (data.error) {
-      console.error("Gemini API Error:", data.error.message);
-      return res.status(data.error.code || 500).json({ error: data.error.message });
-    }
+    if (data.error) throw new Error(data.error.message);
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error("AI response is empty");
 
-    // 3. 応答テキストの解析
-    const resultText = data.candidates[0].content.parts[0].text.replace(/```json/g, "").replace(/```/g, "").trim();
-    res.status(200).json(JSON.parse(resultText));
+    let text = data.candidates[0].content.parts[0].text;
+
+    // JSONの{}部分だけを抽出する正規表現（解析エラー防止）
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Could not parse AI response as JSON");
+
+    res.status(200).json(JSON.parse(jsonMatch[0]));
 
   } catch (error) {
-    console.error("Server Crash:", error.message);
-    res.status(500).json({ error: "内部サーバーエラーが発生しました。", detail: error.message });
+    console.error("Server Error:", error.message);
+    res.status(500).json({ error: "解析に失敗しました", detail: error.message });
   }
 }
